@@ -1,260 +1,168 @@
 package com.cature.webtest
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import androidx.annotation.RequiresApi
-import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 
+private const val TAG = "MainActivity"
 
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        lateinit var webView: WebView
+    private lateinit var webView: WebView
 
-        val initCs = """
-        (async function() {
-            'use strict';
-            
-         var parent = document.getElementsByTagName('head').item(0);
-         var script = document.createElement('script');
-         script.type = 'module';
-         script.src = "https://appassets.androidplatform.net/assets/testing.js"
-         parent.appendChild(script);
-
-        })();
-
-        """.trimIndent()
-
-        fun csInject() {
-
-//            Log.e("csInject,", "oncsInject")
-//            webView.evaluateJavascript("javascript:${MainActivity.initCs}", null)
-
-        }
-
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        webView = findViewById<WebView>(R.id.webView)
+
+        webView = findViewById(R.id.webView)
 
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", AssetsPathHandler(this))
             .build()
 
-        webView.getSettings().setJavaScriptEnabled(true);
-        webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
-        webView.webViewClient = WVClient(assetLoader)
-        webView.getSettings().setDomStorageEnabled(true)
-        webView.settings.allowFileAccess = true
-        webView.settings.allowContentAccess = true
-        webView.settings.allowFileAccessFromFileURLs = true
-        webView.settings.allowUniversalAccessFromFileURLs = true
+        webView.apply {
+            settings.javaScriptEnabled = true
+            settings.javaScriptCanOpenWindowsAutomatically = true
+            settings.domStorageEnabled = true
+            settings.allowFileAccess = true
+            settings.allowContentAccess = true
+            settings.allowFileAccessFromFileURLs = true
+            settings.allowUniversalAccessFromFileURLs = true
+            webViewClient = WVClient(assetLoader)
 
 
-//        webView.loadUrl("https://news.google.com")
-//        webView.loadUrl("https://publicholidays.com.bd/")
-//        webView.loadUrl("https://www.shutterstock.com/explore/apag-stock-assets-0111/")
-        webView.loadUrl("https://twitter.com/elonmusk")
+            // Disable web security for testing purposes
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                settings.setAllowUniversalAccessFromFileURLs(true)
+                settings.allowFileAccessFromFileURLs = true
+            }
 
+        }
 
-        //js()
+        webView.settings.setAllowFileAccessFromFileURLs(true)
+        webView.settings.setAllowUniversalAccessFromFileURLs(true)
 
-        webView.evaluateJavascript(
-            """
-                    (function() {
-                        var script = document.createElement('script');
-                        script.src = 'https://appassets.androidplatform.net/assets/tfjs.min.js';
-                        script.type = 'text/javascript';
-                        document.head.appendChild(script);
-                    })();
-                    """.trimIndent(),
-            null
-        )
-        webView.evaluateJavascript(
-            """
-                    (function() {
-                        var script = document.createElement('script');
-                        script.src = 'https://appassets.androidplatform.net/assets/models/mobilenet_v2_mid/model.min.js';
-                        document.head.appendChild(script);
-                    })();
-                    """.trimIndent(),
-            null
-        )
-        webView.evaluateJavascript(
-            """
-                    (function() {
-                        var script = document.createElement('script');
-                        script.src = 'https://appassets.androidplatform.net/assets/models/mobilenet_v2_mid/group1-shard1of2.min.js';
-                        document.head.appendChild(script);
-                    })();
-                    """.trimIndent(),
-            null
-        )
-        webView.evaluateJavascript(
-            """
-                    (function() {
-                        var script = document.createElement('script');
-                        script.src = 'https://appassets.androidplatform.net/assets/models/mobilenet_v2_mid/group1-shard2of2.min.js';
-                        document.head.appendChild(script);
-                    })();
-                    """.trimIndent(),
-            null
-        )
-        webView.evaluateJavascript(
-            """
-                    (function() {
-                        var script = document.createElement('script');
-                        script.src = 'https://appassets.androidplatform.net/assets/models/mobilenet_v2_mid/model.min.js';
-                        document.head.appendChild(script);
-                    })();
-                    """.trimIndent(),
-            null
-        )
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                request?.grant(request.resources)
+            }
+        }
 
-        webView.evaluateJavascript(
-            """
-                    (function() {
-                        var script = document.createElement('script');
-                        script.src = 'https://appassets.androidplatform.net/assets/nsfwjs.min.js';
-                        document.head.appendChild(script);
-                    })();
-                    """.trimIndent(),
-            null
-        )
-
-        // Execute NSFWJS code after the library is loaded
-        webView.evaluateJavascript(
-            """
-                    (function() {
-                        const img = document.getElementById("logo");
-                        
-
-                        nsfwjs.load().then((model) => {
-                            console.log("Predictions MobileNetV2Mid");
-                    
-                            // Classify the image.
-                            model.classify(img).then((predictions) => {
-                                console.log("Predictions", predictions);
-                              });
-                            });
-                    })();
-                    """.trimIndent(),
-            null
-        )
-
-//        js()
+        webView.loadUrl("https://islamictechlist.com/")
     }
-
-    private fun js() {
-
-
-        Log.e("init", initCs)
-        webView.evaluateJavascript("$initCs", null)
-
-//        webView.setOnLongClickListener {
-
-//            // Inject JavaScript with coordinates to get the parent div of the clicked image
-//            webView.post {
-//
-//                val result = webView.hitTestResult
-//
-//
-//                // if (result.type == WebView.HitTestResult.IMAGE_TYPE || result.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
-//
-//                // The long-clicked element is an image
-//                var imageUrl = result.extra ?: ""
-//                var imageUrlHref = result.extra ?: ""
-//
-//
-//                val href: Message = webView.getHandler().obtainMessage()
-//                webView.requestFocusNodeHref(href)
-//                val data: Bundle = href.data
-//                val iurl = data.getString("url")
-//                if (iurl != null && !iurl.isEmpty()) {
-//                    imageUrlHref = iurl
-//                    //Handle url as you want..
-//                }
-//                imageUrl = imageUrl.replaceFirst("https://", "")
-//                imageUrl = imageUrl.replaceFirst("http://", "")
-//                val js = """
-//                    (function() {
-//                           var blurFun = function (image){
-//                           console.log('blur:' + image);
-//                           console.log('blur:' + '$imageUrl');
-//                           console.log('prev blur filter:' + image.style.cssText);
-//                           if(image.style.filter === "" || image.style.cssText === "filter: blur(10px) !important;"){
-//                               var blurAmt = "blur(" + 0 + "px) "
-//                               image.style.cssText += ';filter: ' + blurAmt + ' !important;'
-//                           }
-//                           else {
-//                                var blurAmt = "blur(" + 10 + "px) "
-//                                image.style.cssText += ';filter: ' + blurAmt + ' !important;'
-//                                 console.log('blur applied:' + '10px');
-//                           }
-//
-//                       };
-//                       var images = document.querySelectorAll("img[src*='$imageUrl']");
-//                       images.forEach(blurFun);
-//                       if(images.length <1)
-//                          document.querySelectorAll("img[srcset*='$imageUrl']").forEach(blurFun);
-////                     document.querySelectorAll("a[href='$imageUrlHref']").forEach(blurFun);
-//
-//                      })()
-//                  """
-//
-////                Log.e("links", "imageUrl: $imageUrl....imageUrlHref:$imageUrlHref")
-////                Log.e("eve", js)
-//                webView.evaluateJavascript("javascript:$js", null)
-    }
-//            true // Consume the long click event
-//        }
-//    }
 }
 
-
-class WVClient(val assetLoader: WebViewAssetLoader) : WebViewClient() {
-
-    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-        super.onPageStarted(view, url, favicon)
-//        MainActivity.csInject()
-
-    }
+class WVClient(private val assetLoader: WebViewAssetLoader) : WebViewClient() {
 
     override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
-        MainActivity.csInject()
+        injectJavaScript(view)
     }
 
-    @WorkerThread
     override fun shouldInterceptRequest(
         view: WebView?, request: WebResourceRequest?
     ): WebResourceResponse? {
+        return assetLoader.shouldInterceptRequest(request!!.url)
+    }
 
-//        Log.e("url",request!!.getUrl().toString());
-     //   if (request!!.getUrl().toString().contains("appassets.androidplatform.net/assets/"))
-            return assetLoader.shouldInterceptRequest(request!!.getUrl());
 
-        return runBlocking {
 
-            withContext(Dispatchers.Main) {
-                // MainActivity.csInject()
-            }
-            super.shouldInterceptRequest(view, request)
+@SuppressLint("SetJavaScriptEnabled")
+private fun injectJavaScript(view: WebView?) {
+    val initJs = """
+        console.log("I AM RUNNING");
+        (function() {
+            var script = document.createElement('script');
+            script.src = 'https://appassets.androidplatform.net/assets/human/human.js';
+            document.head.appendChild(script);
+            console.log("Human library is loaded");
+
+
+
+            script.onload = function() {
+                console.log ("HUMAN JS LOADED")
+
+                const modelsUrl = 'https://appassets.androidplatform.net/assets/models/human';
+
+                const HUMAN_CONFIG = {
+                    modelBasePath: modelsUrl,
+                    backend: "humangl",
+                    // debug: true,
+                    cacheSensitivity: 0.9,
+                    warmup: "none",
+                    async: true,
+                    filter: {
+                        enabled: false,
+                        // width: 224,
+                        // height: 224,
+                    },
+                    face: {
+                        enabled: true,
+                        iris: { enabled: false },
+                        mesh: { enabled: false },
+                        emotion: { enabled: false },
+                        detector: {
+                            modelPath: "blazeface.json",
+                            maxDetected: 2,
+                            minConfidence: 0.25,
+                        },
+                        description: {
+                            enabled: true,
+                            modelPath: "faceres.json",
+                        },
+                    },
+                    body: {
+                        enabled: false,
+                    },
+                    hand: {
+                        enabled: false,
+                    },
+                    gesture: {
+                        enabled: false,
+                    },
+                    object: {
+                        enabled: false,
+                    },
+                };
+
+
+                // Define initHuman function
+                async function initHuman() {
+                    this._human = new Human.Human(HUMAN_CONFIG);
+                    await this._human.load();
+                    this._human.tf.enableProdMode();
+                    // warmup the model
+                    const tensor = this._human.tf.zeros([1, 224, 224, 3]);
+                    await this._human.detect(tensor);
+                    this._human.tf.dispose(tensor);
+                    console.log("HB==Human model warmed up");
+                }
+
+                // Call initHuman function
+                initHuman();
+
+
+            };
+        })();
+    """.trimIndent()
+
+    view?.evaluateJavascript(initJs, null)
+
+    view?.addJavascriptInterface(JavaScriptConsoleInterface(), "AndroidLogger")
+}
+
+    inner class JavaScriptConsoleInterface {
+        @JavascriptInterface
+        fun log(message: String) {
+            Log.d(TAG, "JavaScript Console: $message")
         }
     }
 }
+
