@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.loadUrl("https://islamictechlist.com/")
+        webView.loadUrl("https://www.mymodefa.com/collections/mens-islamic-thobes/products/mens-casual-full-length-islamic-thobe-emirati-506-white")
     }
 }
 
@@ -75,7 +75,7 @@ class WVClient(private val assetLoader: CustomWebViewAssetLoader) : WebViewClien
         return assetLoader.shouldInterceptRequest(request!!.url)
     }
 
- @SuppressLint("SetJavaScriptEnabled")
+@SuppressLint("SetJavaScriptEnabled")
 private fun injectJavaScript(view: WebView?) {
     val initJs = """
         console.log("I AM RUNNING");
@@ -149,8 +149,7 @@ private fun injectJavaScript(view: WebView?) {
                 // Capture image from the WebView
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
-                const img = document.querySelector('img'); // Assuming the image you want to capture is the first one on the page
-                console.log(img)
+                const img = document.querySelector('img.photoswipe__image');
                 canvas.width = img.width;
                 canvas.height = img.height;
                 context.drawImage(img, 0, 0, img.width, img.height);
@@ -162,6 +161,11 @@ private fun injectJavaScript(view: WebView?) {
                 image.src = imageData;
                 image.onload = async function() {
                     const res = await window._human.detect(image); // Wait for the Promise to resolve
+                    const gender = res.face[0].gender; // Corrected this line
+                    if (gender === "male") {
+                            img.style.filter = "blur(5px)";
+                            img.style.opacity = "0.5";
+                    }
                     console.log(JSON.stringify(res));
                 };
             };
