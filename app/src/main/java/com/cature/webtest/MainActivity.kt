@@ -37,13 +37,11 @@ class MainActivity : AppCompatActivity() {
             settings.allowUniversalAccessFromFileURLs = true
             webViewClient = WVClient(assetLoader)
 
-
             // Disable web security for testing purposes
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 settings.setAllowUniversalAccessFromFileURLs(true)
                 settings.allowFileAccessFromFileURLs = true
             }
-
         }
 
         webView.settings.setAllowFileAccessFromFileURLs(true)
@@ -77,9 +75,7 @@ class WVClient(private val assetLoader: CustomWebViewAssetLoader) : WebViewClien
         return assetLoader.shouldInterceptRequest(request!!.url)
     }
 
-
-
-@SuppressLint("SetJavaScriptEnabled")
+ @SuppressLint("SetJavaScriptEnabled")
 private fun injectJavaScript(view: WebView?) {
     val initJs = """
         console.log("I AM RUNNING");
@@ -89,10 +85,8 @@ private fun injectJavaScript(view: WebView?) {
             document.head.appendChild(script);
             console.log("Human library is loaded");
 
-
-
-            script.onload = function() {
-                console.log ("HUMAN JS LOADED")
+            script.onload = async function() { // Mark the function as async
+                console.log ("HUMAN JS LOADED");
 
                 const modelsUrl = 'https://appassets.androidplatform.net/assets/models/human';
 
@@ -137,23 +131,39 @@ private fun injectJavaScript(view: WebView?) {
                     },
                 };
 
-
                 // Define initHuman function
                 async function initHuman() {
-                    this._human = new Human.Human(HUMAN_CONFIG);
-                    await this._human.load();
-                    this._human.tf.enableProdMode();
+                    window._human = new Human.Human(HUMAN_CONFIG);
+                    await window._human.load();
+                    window._human.tf.enableProdMode();
                     // warmup the model
-                    const tensor = this._human.tf.zeros([1, 224, 224, 3]);
-                    await this._human.detect(tensor);
-                    this._human.tf.dispose(tensor);
+                    const tensor = window._human.tf.zeros([1, 224, 224, 3]);
+                    await window._human.detect(tensor);
+                    window._human.tf.dispose(tensor);
                     console.log("HB==Human model warmed up");
                 }
 
                 // Call initHuman function
-                initHuman();
+                await initHuman();
 
+                // Capture image from the WebView
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                const img = document.querySelector('img'); // Assuming the image you want to capture is the first one on the page
+                console.log(img)
+                canvas.width = img.width;
+                canvas.height = img.height;
+                context.drawImage(img, 0, 0, img.width, img.height);
+                const imageData = canvas.toDataURL('image/jpeg'); // Convert canvas to data URL
+                console.log(imageData)
 
+                // Create HTMLImageElement and pass it to human.detect()
+                const image = new Image();
+                image.src = imageData;
+                image.onload = async function() {
+                    const res = await window._human.detect(image); // Wait for the Promise to resolve
+                    console.log(JSON.stringify(res));
+                };
             };
         })();
     """.trimIndent()
@@ -170,5 +180,3 @@ private fun injectJavaScript(view: WebView?) {
         }
     }
 }
-
-
