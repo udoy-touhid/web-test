@@ -146,28 +146,30 @@ private fun injectJavaScript(view: WebView?) {
                 // Call initHuman function
                 await initHuman();
 
-                // Capture image from the WebView
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                const img = document.querySelector('img.photoswipe__image');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                context.drawImage(img, 0, 0, img.width, img.height);
-                const imageData = canvas.toDataURL('image/jpeg'); // Convert canvas to data URL
-                console.log(imageData)
+                // Capture image from all the images on the WebView
+                const images = document.querySelectorAll('img');
+                images.forEach(async function(img) {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0, img.width, img.height);
+                    const imageData = canvas.toDataURL('image/jpeg'); // Convert canvas to data URL
 
-                // Create HTMLImageElement and pass it to human.detect()
-                const image = new Image();
-                image.src = imageData;
-                image.onload = async function() {
-                    const res = await window._human.detect(image); // Wait for the Promise to resolve
-                    const gender = res.face[0].gender; // Corrected this line
-                    if (gender === "male") {
+                    // Create HTMLImageElement and pass it to human.detect()
+                    const image = new Image();
+                    image.src = imageData;
+                    image.onload = async function() {
+                        const res = await window._human.detect(image); // Wait for the Promise to resolve
+                        const gender = res.face[0].gender;
+                        if (gender === "male") {
                             img.style.filter = "blur(5px)";
                             img.style.opacity = "0.5";
-                    }
-                    console.log(JSON.stringify(res));
-                };
+                        }
+                        console.log(JSON.stringify(res));
+                    };
+                });
+
             };
         })();
     """.trimIndent()
