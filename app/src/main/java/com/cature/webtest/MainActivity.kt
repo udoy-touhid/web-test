@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webView)
 
-        val assetLoader = WebViewAssetLoader.Builder()
+        val assetLoader = CustomWebViewAssetLoader.Builder()
             .addPathHandler("/assets/", AssetsPathHandler(this))
             .build()
 
@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-class WVClient(private val assetLoader: WebViewAssetLoader) : WebViewClient() {
+class WVClient(private val assetLoader: CustomWebViewAssetLoader) : WebViewClient() {
 
     override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
@@ -69,6 +69,11 @@ class WVClient(private val assetLoader: WebViewAssetLoader) : WebViewClient() {
     override fun shouldInterceptRequest(
         view: WebView?, request: WebResourceRequest?
     ): WebResourceResponse? {
+       // if(request?.method.equals("OPTIONS", ignoreCase = true))
+       // {
+            //Log.e("CORS","${request!!.url}")
+            //return OptionsAllowResponse.build()
+      //  }
         return assetLoader.shouldInterceptRequest(request!!.url)
     }
 
@@ -165,4 +170,5 @@ private fun injectJavaScript(view: WebView?) {
         }
     }
 }
+
 
