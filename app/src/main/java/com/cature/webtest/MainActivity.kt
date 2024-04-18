@@ -38,7 +38,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
 
-
         webView = findViewById(R.id.webView)
 
         val assetLoader =
@@ -70,16 +69,13 @@ class MainActivity : AppCompatActivity() {
                 request?.grant(request.resources)
             }
         }
-        val url = "https://www.google.com/search?q=thob&sca_esv=a9f733130965a78f&biw=412&bih=784&prmd=sivmnbz&source=lnms&ved=1t:200715&ictx=111&tbm=isch"
+        val url =
+            "https://www.google.com/search?q=thob&sca_esv=a9f733130965a78f&biw=412&bih=784&prmd=sivmnbz&source=lnms&ved=1t:200715&ictx=111&tbm=isch"
 //        val url = "https://twitter.com/elonmusk"
         webView.loadUrl(url)
     }
-
-
 }
 
-//300 tk 180din
-//600tk 1 year + 60din
 class WVClient(
     private val assetLoader: CustomWebViewAssetLoader,
     context: Context,
@@ -94,70 +90,78 @@ class WVClient(
         )
     }
 
-
     override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
-//        injectJavaScript(view)
     }
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-        Log.e("shouldOverride","url ${request?.url.toString()}")
+        Log.e("shouldOverride", "url ${request?.url.toString()}")
 
         return super.shouldOverrideUrlLoading(view, request)
     }
+
     override fun shouldInterceptRequest(
         webView: WebView?, request: WebResourceRequest?
     ): WebResourceResponse? {
-        Log.e("shouldIntercept","url ${request?.url.toString()}")
-        listOf(".png", ".jpg", "jpeg").forEach {
-            if (request == null || webView == null) return null
-            if (request.url.toString().contains(it, ignoreCase = true)) {
-                Log.e("shouldInterceptRequest", "img content " + request.url.toString())
-                val localStoragePath =
-                    webView.context.filesDir.path + "/" + request.url.lastPathSegment!!
-                download(request.url.toString(), localStoragePath)
+        Log.e("shouldIntercept", "url ${request?.url.toString()}")
+        if (request == null || webView == null) {
+            return assetLoader.shouldInterceptRequest(request!!.url)
+        }
 
-                var imageUrl = request.url.toString()
-                imageUrl = imageUrl.replaceFirst("https://", "")
-                imageUrl = imageUrl.replaceFirst("http://", "")
-                runBlocking {
-                    runCatching {
-                        withContext(context = Dispatchers.Main) {
-                            objectDetectorHelper.detect(BitmapFactory.decodeFile(localStoragePath),
-                                0,
-                                object : ObjectDetectorHelper.DetectorListener {
-                                    override fun onError(error: String) {
-                                        Log.e("onError", "$error")
+        val response = ApiClient.apiService.download(request.url.toString()).execute()
+        val contentType = response.headers().get("Content-Type")
+        Log.e("contentType", contentType ?: "contentType")
+
+        if (contentType?.startsWith("image") == false) {
+            return assetLoader.shouldInterceptRequest(request.url)
+        }
+        try {
+
+            val localStoragePath =
+                webView.context.filesDir.path + "/" + request.url.lastPathSegment!!
+            download(response, localStoragePath)
+
+            var imageUrl = request.url.toString()
+            imageUrl = imageUrl.replaceFirst("https://", "")
+            imageUrl = imageUrl.replaceFirst("http://", "")
+            runBlocking {
+                runCatching {
+                    withContext(context = Dispatchers.Main) {
+                        objectDetectorHelper.detect(BitmapFactory.decodeFile(localStoragePath),
+                            0,
+                            object : ObjectDetectorHelper.DetectorListener {
+                                override fun onError(error: String) {
+                                    Log.e("onError", "$error")
+                                }
+
+                                override fun onResults(
+                                    results: MutableList<Detection>?,
+                                    inferenceTime: Long,
+                                    imageHeight: Int,
+                                    imageWidth: Int
+                                ) {
+
+                                    var personFound = false
+
+                                    results?.forEach { result ->
+                                        val data = result.categories.find {
+                                            it.label.equals(
+                                                "person", ignoreCase = true
+                                            )
+                                        }
+                                        if (data != null) {
+                                            personFound = true
+                                        }
                                     }
+                                    if (personFound) {
+                                        Log.e("onResults", "person found on $imageUrl")
 
-                                    override fun onResults(
-                                        results: MutableList<Detection>?,
-                                        inferenceTime: Long,
-                                        imageHeight: Int,
-                                        imageWidth: Int
-                                    ) {
+                                    } else {
+                                        Log.e("onResults", "person not found on $imageUrl")
 
-                                        var personFound = false
-
-                                        results?.forEach { result ->
-                                            var data = result.categories.find {
-                                                it.label.equals(
-                                                    "person", ignoreCase = true
-                                                )
-                                            }
-                                            if (data != null) {
-                                                personFound = true
-                                            }
-                                        }
-                                        if (personFound) {
-                                            Log.e("onResults", "person found on $imageUrl")
-
-                                        } else {
-                                            Log.e("onResults", "person not found on $imageUrl")
-
-                                        }
-                                        if (!personFound) return
-                                        val js = """
+                                    }
+                                    if (!personFound) return
+                                    val js = """
                                     (function() {
                                         var blurFunc = function (image){
                                            console.log('blur:' + image);
@@ -175,30 +179,22 @@ class WVClient(
                             
                                       })()
                                 """.trimIndent()
-                                        webView.evaluateJavascript(js, null)
+                                    webView.evaluateJavascript(js, null)
 
-                                    }
+                                }
 
-                                })
-                        }
+                            })
                     }
                 }
-                try {
-
-                    val `is`: InputStream = FileInputStream(File(localStoragePath))
-                    return WebResourceResponse("image/png", "UTF-8", `is`)
-                } catch (e: Exception) {
-                    return null
-                }
-
             }
+
+            val `is`: InputStream = FileInputStream(File(localStoragePath))
+            return WebResourceResponse("image/png", "UTF-8", `is`)
+        } catch (e: Exception) {
+            Log.e("exp", e.message ?: "")
+            return assetLoader.shouldInterceptRequest(request.url)
         }
-        // if(request?.method.equals("OPTIONS", ignoreCase = true))
-        // {
-        //Log.e("CORS","${request!!.url}")
-        //return OptionsAllowResponse.build()
-        //  }
-        return assetLoader.shouldInterceptRequest(request!!.url)
+
     }
 
     @SuppressLint("SetJavaScriptEnabled")
