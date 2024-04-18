@@ -13,12 +13,19 @@ import com.cature.webtest.ObjectDetectorHelper.Companion.MODEL_EFFICIENTDETV0
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
 import org.tensorflow.lite.task.vision.detector.Detection
+import retrofit2.Call
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.http.GET
+import retrofit2.http.Url
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.net.URL
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "MainActivity"
 
@@ -315,13 +322,43 @@ class WVClient(
     }
 }
 
-fun download(link: String, path: String) {
-    try {
-        URL(link).openStream().use { input ->
-            FileOutputStream(File(path)).use { output ->
-                input.copyTo(output)
-            }
+
+fun download(response: Response<ResponseBody>, path: String) {
+    response.body()?.byteStream().use { input ->
+        FileOutputStream(File(path)).use { output ->
+            input?.copyTo(output)
         }
-    } catch (_: Exception) {
     }
+
+}
+
+interface ApiService {
+    @GET
+    fun download(@Url url: String): Call<ResponseBody>
+
+}
+
+class ApiClient {
+
+    companion object {
+
+        val apiService by lazy { create() }
+        fun create(): ApiService {
+            val httpClient by lazy {
+                OkHttpClient.Builder().callTimeout(1, TimeUnit.MINUTES)
+                    .connectTimeout(20, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS).build()
+            }
+
+            val retrofit by lazy {
+                Retrofit.Builder()
+                    // .addConverterFactory(GsonConverterFactory.create())
+                    .baseUrl("https://localhost.com")
+                    // .client(httpClient)
+                    .build()
+            }
+            return retrofit.create(ApiService::class.java)
+        }
+    }
+
 }
