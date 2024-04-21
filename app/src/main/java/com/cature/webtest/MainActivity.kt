@@ -37,9 +37,23 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
         webView = findViewById(R.id.webView)
 
+        findViewById<TextView>(R.id.back).setOnClickListener {
+            webView.goBack()
+        }
+        findViewById<TextView>(R.id.copy).setOnClickListener {
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("url", webView.url)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<TextView>(R.id.paste).setOnClickListener {
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val data = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+            if (data != null)
+                webView.loadUrl(data)
+        }
         val assetLoader =
             CustomWebViewAssetLoader.Builder().addPathHandler("/assets/", AssetsPathHandler(this))
                 .build()
