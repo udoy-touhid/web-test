@@ -1,12 +1,20 @@
 package com.cature.webtest
 
-import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.webkit.*
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import com.cature.webtest.ObjectDetectorHelper.Companion.MODEL_EFFICIENTDETV0
@@ -26,6 +34,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
+
 
 private const val TAG = "MainActivity"
 
@@ -86,6 +95,8 @@ class MainActivity : AppCompatActivity() {
         val url =
             "https://www.google.com/search?q=thob&sca_esv=a9f733130965a78f&biw=412&bih=784&prmd=sivmnbz&source=lnms&ved=1t:200715&ictx=111&tbm=isch"
 //        val url = "https://twitter.com/elonmusk"
+//        val url = "https://youtube.com"
+//        val url = "https://amazon.com"
         webView.loadUrl(url)
     }
 }
@@ -98,7 +109,6 @@ class WVClient(
     private var objectDetectorHelper: ObjectDetectorHelper
 
     init {
-
         objectDetectorHelper = ObjectDetectorHelper(
             context = context, currentModel = MODEL_EFFICIENTDETV0
         )
@@ -110,7 +120,6 @@ class WVClient(
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
         Log.e("shouldOverride", "url ${request?.url.toString()}")
-
         return super.shouldOverrideUrlLoading(view, request)
     }
 
@@ -202,136 +211,14 @@ class WVClient(
                 }
             }
 
-            val `is`: InputStream = FileInputStream(File(localStoragePath))
-            return WebResourceResponse("image/png", "UTF-8", `is`)
+            val inputStream: InputStream = FileInputStream(File(responseFilePath))
+            return WebResourceResponse(contentType, "UTF-8", inputStream)
         } catch (e: Exception) {
             Log.e("exp", e.message ?: "")
             return assetLoader.shouldInterceptRequest(request.url)
         }
-
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun injectJavaScript(view: WebView?) {
-        val initJs = """
-        console.log("I AM RUNNING");
-        (function() {
-            var script = document.createElement('script');
-            script.src = 'https://appassets.androidplatform.net/assets/human/human.js';
-            document.head.appendChild(script);
-            console.log("Human library is loaded");
-
-            script.onload = async function() { // Mark the function as async
-                console.log ("HUMAN JS LOADED");
-
-                const modelsUrl = 'https://appassets.androidplatform.net/assets/models/human';
-
-                const HUMAN_CONFIG = {
-                    modelBasePath: modelsUrl,
-                    backend: "humangl",
-                    // debug: true,
-                    cacheSensitivity: 0.9,
-                    warmup: "none",
-                    async: true,
-                    filter: {
-                        enabled: false,
-                        // width: 224,
-                        // height: 224,
-                    },
-                    face: {
-                        enabled: true,
-                        iris: { enabled: false },
-                        mesh: { enabled: false },
-                        emotion: { enabled: false },
-                        detector: {
-                            modelPath: "blazeface.json",
-                            maxDetected: 2,
-                            minConfidence: 0.25,
-                        },
-                        description: {
-                            enabled: true,
-                            modelPath: "faceres.json",
-                        },
-                    },
-                    body: {
-                        enabled: false,
-                    },
-                    hand: {
-                        enabled: false,
-                    },
-                    gesture: {
-                        enabled: false,
-                    },
-                    object: {
-                        enabled: false,
-                    },
-                };
-
-                // Define initHuman function
-                async function initHuman() {
-                    window._human = new Human.Human(HUMAN_CONFIG);
-                    await window._human.load();
-                    window._human.tf.enableProdMode();
-                    // warmup the model
-                    const tensor = window._human.tf.zeros([1, 224, 224, 3]);
-                    await window._human.detect(tensor);
-                    window._human.tf.dispose(tensor);
-                    console.log("HB==Human model warmed up");
-                }
-
-
-                console.log("Call initHuman function");
-
-                // Call initHuman function
-                await initHuman();
-                
-                console.log("initHuman function finished");
-
-
-                // Capture image from all the images on the WebView
-                const images = document.querySelectorAll('img');
-                images.forEach(async function(img) {
-                    //const canvas = document.createElement('canvas');
-                   // const context = canvas.getContext('2d');
-                   // canvas.width = img.width;
-                   // canvas.height = img.height;
-                   // context.drawImage(img, 0, 0, img.width, img.height);
-                   // const imageData = canvas.toDataURL('image/jpeg'); // Convert canvas to data URL
-                    
-                //    const image = new ImageData(new Uint8ClampedArray(img), img.width, img.height);
-
-                    // Create HTMLImageElement and pass it to human.detect()
-                   // const image = new Image();
-                    //image.src = imageData;
-                    img.crossOrigin = 'anonymous';
-                   // img.onload = async function() {
-                        const res = await window._human.detect(img); // Wait for the Promise to resolve
-                        const gender = res.face[0].gender;
-                        if (gender === "male") {
-                            img.style.filter = "blur(5px)";
-                            img.style.opacity = "0.5";
-                        }
-                        console.log(JSON.stringify(res));
-                //    };
-                });
-
-            };
-        })();
-    """.trimIndent()
-
-        view?.evaluateJavascript(initJs, null)
-
-        view?.addJavascriptInterface(JavaScriptConsoleInterface(), "AndroidLogger")
-    }
-
-    inner class JavaScriptConsoleInterface {
-        @JavascriptInterface
-        fun log(message: String) {
-            Log.d(TAG, "JavaScript Console: $message")
-        }
     }
 }
-
 
 fun download(response: Response<ResponseBody>, path: String) {
     response.body()?.byteStream().use { input ->
