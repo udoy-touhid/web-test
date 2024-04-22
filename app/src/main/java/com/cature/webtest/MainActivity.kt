@@ -50,6 +50,8 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<TextView>(R.id.back).setOnClickListener {
             webView.goBack()
+            Toast.makeText(this, "Back", Toast.LENGTH_SHORT).show()
+
         }
         findViewById<TextView>(R.id.copy).setOnClickListener {
             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
@@ -60,8 +62,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.paste).setOnClickListener {
             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val data = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-            if (data != null)
+            if (data != null) {
                 webView.loadUrl(data)
+                Toast.makeText(this, "Pasted", Toast.LENGTH_SHORT).show()
+            }
         }
         val assetLoader =
             CustomWebViewAssetLoader.Builder().addPathHandler("/assets/", AssetsPathHandler(this))
@@ -92,11 +96,11 @@ class MainActivity : AppCompatActivity() {
                 request?.grant(request.resources)
             }
         }
-        val url =
-            "https://www.google.com/search?q=thob&sca_esv=a9f733130965a78f&biw=412&bih=784&prmd=sivmnbz&source=lnms&ved=1t:200715&ictx=111&tbm=isch"
+//        val url = "https://www.google.com/search?q=thob&sca_esv=a9f733130965a78f&biw=412&bih=784&prmd=sivmnbz&source=lnms&ved=1t:200715&ictx=111&tbm=isch"
 //        val url = "https://twitter.com/elonmusk"
 //        val url = "https://youtube.com"
 //        val url = "https://amazon.com"
+        val url = "https://www.prothomalo.com/"
         webView.loadUrl(url)
     }
 }
