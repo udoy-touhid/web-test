@@ -100,7 +100,8 @@ class MainActivity : AppCompatActivity() {
 //        val url = "https://twitter.com/elonmusk"
 //        val url = "https://youtube.com"
 //        val url = "https://amazon.com"
-        val url = "https://www.prothomalo.com/"
+//        val url = "https://www.prothomalo.com/"
+        val url = "https://dailybhorerdak.com/details.php?id=230519"
         webView.loadUrl(url)
     }
 }
@@ -130,23 +131,28 @@ class WVClient(
     override fun shouldInterceptRequest(
         webView: WebView?, request: WebResourceRequest?
     ): WebResourceResponse? {
+
         Log.e("shouldIntercept", "url ${request?.url.toString()}")
         if (request == null || webView == null) {
             return assetLoader.shouldInterceptRequest(request!!.url)
         }
 
-        val response = ApiClient.apiService.download(request.url.toString()).execute()
-        val contentType = response.headers().get("Content-Type")
-        Log.e("contentType", contentType ?: "contentType")
-
-        if (contentType?.startsWith("image") == false) {
-            return assetLoader.shouldInterceptRequest(request.url)
-        }
         try {
+            val response = ApiClient.apiService.download(request.url.toString()).execute()
+            val contentType = response.headers().get("Content-Type")
+            Log.e("contentType", contentType ?: "contentType")
 
-            val localStoragePath =
-                webView.context.filesDir.path + "/" + request.url.lastPathSegment!!
-            download(response, localStoragePath)
+            if (contentType?.startsWith("image") == false) {
+                return assetLoader.shouldInterceptRequest(request.url)
+            }
+
+            val regex = "[^A-Za-z0-9.]+"
+            val fileName = request.url.toString().replace(Regex(regex), "_")
+            val responseFilePath = webView.context.filesDir.path + "/" + fileName
+            //todo apply caching and avoid re-downloading and processing of same image
+            download(response, responseFilePath)
+
+            Log.e("localStoragePath", responseFilePath)
 
             var imageUrl = request.url.toString()
             imageUrl = imageUrl.replaceFirst("https://", "")
@@ -154,7 +160,7 @@ class WVClient(
             runBlocking {
                 runCatching {
                     withContext(context = Dispatchers.Main) {
-                        objectDetectorHelper.detect(BitmapFactory.decodeFile(localStoragePath),
+                        objectDetectorHelper.detect(BitmapFactory.decodeFile(responseFilePath),
                             0,
                             object : ObjectDetectorHelper.DetectorListener {
                                 override fun onError(error: String) {
@@ -181,10 +187,10 @@ class WVClient(
                                         }
                                     }
                                     if (personFound) {
-                                        Log.e("onResults", "person found on $imageUrl")
+                                        Log.e("onResults", "person found on https://$imageUrl")
 
                                     } else {
-                                        Log.e("onResults", "person not found on $imageUrl")
+                                        Log.e("onResults", "person not found on https://$imageUrl")
 
                                     }
                                     if (!personFound) return
@@ -198,11 +204,17 @@ class WVClient(
                                            image.style.cssText += ';filter: ' + blurAmt + ' !important;'
                                            console.log('blur applied:' + '10px');
                                        };
-                                       var images = document.querySelectorAll("img[src*='$imageUrl']");
-                                       //if(images.length <1)
-                                          document.querySelectorAll("img[srcset*='$imageUrl']").forEach(blurFunc);
-                                       //else 
-                                          images.forEach(blurFunc);
+                                       console.log('jsrun');
+
+                                       document.querySelectorAll("img[src*='$imageUrl']").forEach(blurFunc);
+                                       document.querySelectorAll("img[srcset*='$imageUrl']").forEach(blurFunc);
+                                       document.querySelectorAll("div[style*='$imageUrl']").forEach(blurFunc);
+                                       document.querySelectorAll("video[style*='$imageUrl']").forEach(blurFunc);
+                                       document.querySelectorAll("iframe[style*='$imageUrl']").forEach(blurFunc);
+                                       document.querySelectorAll("a[style*='$imageUrl']").forEach(blurFunc);
+                                       document.querySelectorAll("i[style*='$imageUrl']").forEach(blurFunc);
+                                       console.log('jsrun'+document.querySelectorAll("img[src*='$imageUrl']").length);
+
                             
                                       })()
                                 """.trimIndent()
